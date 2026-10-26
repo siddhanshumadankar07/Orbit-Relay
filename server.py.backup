@@ -1,0 +1,183 @@
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from typing import Optional
+import json
+import urllib.request
+from datetime import datetime, timezone
+from uuid import uuid4
+
+app = FastAPI(title="OrbitRelay API")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Demo-only in-memory mission queue.
+# Missions disappear when the backend restarts.
+missions = []
+
+
+class Report(BaseModel):
+    text: str
+
+
+class MissionRequest(BaseModel):
+    event_type: str
+    location: str
+    urgency: str = "Medium"
+    summary: str = ""
+    impact: Optional[str] = "Unknown"
+
+
+def calculate_priority(mission):
+    """Transparent rule-based priority score, from 0 to 100."""
+    score = 0
+
+    urgency_scores = {
+        "high": 50,
+        "medium": 30,
+        "low": 10,
+    }
+
+    score += urgency_scores.get(
+        mission["urgency"].lower(), 10
+    )
+
+    event = mission["event_type"].lower()
+
+    # Event type adds a modest, explicit demo weighting.
+    if any(word in event for word in ["flood", "wildfire", "fire"]):
+        score += 20
+    elif any(word in event for word in ["storm", "cyclone"]):
+        score += 15
+    else:
+        score += 5
+
+    impact = (mission.get("impact") or "Unknown").lower()
+
+    if "multiple villages" in impact or "large area" in impact:
+        score += 20
+    elif "community" in impact or "several" in impact:
+        score += 15
+    elif impact != "unknown":
+        score += 5
+
+    return min(score, 100)
+
+
+@app.get("/")
+def home():
+    return {"message": "OrbitRelay is running"}
+
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+
+
+@app.post("/analyze-report")
+def analyze_report(report: Report):
+    prompt = f"""
+Analyze this disaster report for a DEMONSTRATION dashboard.
+Return only valid JSON with these fields:
+event_type, location, urgency, summary.
+urgency must be Low, Medium, or High.
+Do not invent missing details. Use "Unknown" if needed.
+
+Report: {report.text}
+"""
+
+    try:
+        body = json.dumps({
+            "model": "gemma3:4b",
+            "prompt": prompt,
+            "stream": False,
+            "format": "json",
+        }).encode("utf-8")
+
+        request = urllib.request.Request(
+            "http://127.0.0.1:11434/api/generate",
+            data=body,
+            headers={"Content-Type": "application/json"},
+        )
+
+        with urllib.request.urlopen(request, timeout=60) as response:
+            result = json.loads(response.read().decode("utf-8"))
+
+        data = json.loads(result["response"])
+        data["source"] = "Ollama Gemma 3"
+        data["simulation"] = True
+        return data
+
+    except Exception:
+        text = report.text.lower()
+
+        if any(word in text for word in ["flood", "overflow", "inundation"]):
+            event = "Flood"
+        elif any(word in text for word in ["fire", "wildfire", "smoke"]):
+            event = "Wildfire"
+        elif any(word in text for word in ["cyclone", "storm", "hurricane"]):
+            event = "Severe storm"
+        else:
+            event = "Unclassified event"
+
+        return {
+            "event_type": event,
+            "location": "Requires review",
+            "urgency": "Medium",
+            "summary": "Fallback analysis. Verify report details manually.",
+            "source": "Rule-based fallback",
+            "simulation": True,
+        }
+
+
+@app.post("/schedule-mission")
+def schedule_mission(request: MissionRequest):
+    mission = {
+        "id": str(uuid4())[:8].upper(),
+        "event_type": request.event_type,
+        "location": request.location,
+        "urgency": request.urgency.title(),
+        "summary": request.summary,
+        "impact": request.impact or "Unknown",
+        "status": "Queued",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "simulation": True,
+    }
+
+    mission["priority_score"] = calculate_priority(mission)
+    missions.append(mission)
+
+    # Highest priority first; creation order breaks ties.
+    missions.sort(
+        key=lambda item: item["priority_score"],
+        reverse=True,
+    )
+
+    for index, item in enumerate(missions, start=1):
+        item["rank"] = index
+
+    return {
+        "message": "Demo mission added to the queue",
+        "mission": mission,
+        "queue": missions,
+        "simulation": True,
+    }
+
+
+@app.get("/missions")
+def get_missions():
+    return {
+        "missions": missions,
+        "count": len(missions),
+        "simulation": True,
+        "note": "Demo queue only; no real satellite task is submitted.",
+    }

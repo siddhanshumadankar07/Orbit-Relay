@@ -1,0 +1,103 @@
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#030608" />
+    <meta
+      name="description"
+      content="OrbitRelay — AI-assisted Earth observation and disaster-monitoring command center. Real-time planetary dashboard for mission control, disaster alerts, and environmental analysis."
+    />
+    <meta name="color-scheme" content="dark" />
+    <title>OrbitRelay — Earth Observation &amp; Disaster Monitoring</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+
+    <style>
+      html { background: #030608; }
+
+      body {
+        margin: 0;
+        min-width: 320px;
+        min-height: 100vh;
+      }
+
+      #root { min-height: 100vh; }
+
+      .initial-loader {
+        min-height: 100vh;
+        display: grid;
+        place-content: center;
+        justify-items: center;
+        gap: 18px;
+        background:
+          radial-gradient(
+            ellipse at 50% 42%,
+            rgba(24, 59, 42, 0.22),
+            transparent 50%
+          ),
+          #111411;
+        color: #eef2ee;
+        font-family: "Manrope", "DM Sans", sans-serif;
+      }
+
+      .initial-loader-mark {
+        width: 48px;
+        height: 48px;
+        border: 1px solid rgba(139, 201, 160, 0.35);
+        border-radius: 14px;
+        display: grid;
+        place-items: center;
+        color: #8bc9a0;
+        font-size: 26px;
+        animation: orbit-pulse 2s ease-in-out infinite;
+      }
+
+      .initial-loader-label {
+        font-size: 11px;
+        letter-spacing: 3.5px;
+        color: #5c6e5c;
+        font-weight: 600;
+      }
+
+      .initial-loader-sub {
+        font-size: 10px;
+        letter-spacing: 1.5px;
+        color: #3a4a3a;
+        margin-top: -10px;
+      }
+
+      @keyframes orbit-pulse {
+        0%, 100% { box-shadow: none; transform: none; }
+        50% {
+          box-shadow: 0 0 28px rgba(139, 201, 160, 0.18);
+          transform: scale(1.04);
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .initial-loader-mark { animation: none; }
+      }
+    </style>
+  </head>
+
+  <body>
+    <div id="root">
+      <div class="initial-loader">
+        <div class="initial-loader-mark" aria-hidden="true">&#9673;</div>
+        <div class="initial-loader-label">ORBITRELAY</div>
+        <div class="initial-loader-sub">EARTH OBSERVATION COMMAND CENTER</div>
+      </div>
+    </div>
+
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
