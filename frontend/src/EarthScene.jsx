@@ -9,9 +9,6 @@ import {
 } from './disasterData'
 import {
   clusterDisastersIntoRegions,
-  createSphericalCapGeometry,
-  createBoundaryOutlineGeometry,
-  createTrackLineGeometry,
   REGION_SURFACE_RADIUS,
 } from './regionGeometry'
 
@@ -691,33 +688,14 @@ function OrbitalRing({ radius, tilt = [0, 0, 0], color = '#38bdf8', opacity = 0.
   )
 }
 
-/* ── Solid Affected Region directly on Earth's Surface ──────── */
+/* ── Disaster Event Marker & Surface Region ────────────────── */
 function SolidDisasterRegion({ region, selected, onSelect }) {
-  const { fillGeometry, borderGeometry, trackLineGeometry } = useMemo(() => {
-    const seed = (region.id.charCodeAt(region.id.length - 1) || 1) + 3
-    const { geometry: fill, boundaryLatLons } = createSphericalCapGeometry(
-      region.centerLat,
-      region.centerLon,
-      region.radiusDeg,
-      32,
-      seed,
-      region.isCyclone
-    )
-
-    const border = createBoundaryOutlineGeometry(boundaryLatLons)
-    const trackLine = region.hasRealTrack && region.trackCoords
-      ? createTrackLineGeometry(region.trackCoords)
-      : null
-
-    return { fillGeometry: fill, borderGeometry: border, trackLineGeometry: trackLine }
-  }, [region])
-
   const centerPos = useMemo(
     () => latLonToVector(region.centerLat, region.centerLon, REGION_SURFACE_RADIUS + 0.003),
     [region.centerLat, region.centerLon]
   )
 
-  // Solid, opaque surface material with restrained brightness (depthWrite false prevents Earth occlusion/z-fighting)
+  // Surface material for genuine polygon regions
   const fillMaterial = useMemo(() => {
     return new THREE.MeshStandardMaterial({
       color: region.color,
@@ -729,11 +707,10 @@ function SolidDisasterRegion({ region, selected, onSelect }) {
       polygonOffset: true,
       polygonOffsetFactor: -2.0,
       polygonOffsetUnits: -2.0,
-      depthWrite: false, // Ensures regional overlays never occlude or black out the Earth surface
+      depthWrite: false, // Ensures overlays never occlude or black out the Earth surface
     })
   }, [region.color, selected])
 
-  // Crisp boundary line contour
   const borderMaterial = useMemo(() => {
     return new THREE.LineBasicMaterial({
       color: selected ? '#ffffff' : region.color,
@@ -744,41 +721,26 @@ function SolidDisasterRegion({ region, selected, onSelect }) {
     })
   }, [region.color, selected])
 
-  // Subtle real trajectory line material (for cyclones with verified track coordinates only)
-  const trackMaterial = useMemo(() => {
-    return new THREE.LineBasicMaterial({
-      color: '#f97316',
-      transparent: true,
-      opacity: 0.75,
-      linewidth: 1,
-      depthWrite: false,
-    })
-  }, [])
-
   return (
     <group>
-      {/* Real observed storm trajectory line (strictly for cyclones with verified points) */}
-      {trackLineGeometry && (
-        <line
-          geometry={trackLineGeometry}
-          material={trackMaterial}
-        />
+      {/* Genuine NASA EONET Polygon Surface Mesh (rendered only when authentic boundary exists) */}
+      {region.hasReliablePolygon && region.fillGeometry && (
+        <group>
+          <mesh
+            geometry={region.fillGeometry}
+            material={fillMaterial}
+            onClick={(e) => {
+              e.stopPropagation()
+              onSelect(selected ? null : region.primaryDisasterId)
+            }}
+          />
+          {region.borderGeometry && (
+            <lineLoop geometry={region.borderGeometry} material={borderMaterial} />
+          )}
+        </group>
       )}
 
-      {/* Solid Affected Region Surface Mesh (strictly spherical, zero floating) */}
-      <mesh
-        geometry={fillGeometry}
-        material={fillMaterial}
-        onClick={(e) => {
-          e.stopPropagation()
-          onSelect(selected ? null : region.primaryDisasterId)
-        }}
-      />
-
-      {/* Clearly Defined Boundary Contour Line */}
-      <lineLoop geometry={borderGeometry} material={borderMaterial} />
-
-      {/* Regional Anchor & Single Compact Popup */}
+      {/* Solid Surface Marker & Single Compact Popup */}
       <Html
         distanceFactor={5.5}
         position={centerPos}
@@ -827,11 +789,6 @@ function SolidDisasterRegion({ region, selected, onSelect }) {
                   <strong className="compact-popup-title">
                     {region.sanskritName}
                   </strong>
-                  {region.clusterCount > 1 && (
-                    <span className="compact-popup-clustertag">
-                      {region.clusterCount} Samahit
-                    </span>
-                  )}
                 </div>
                 <button
                   className="compact-popup-close-btn"
@@ -850,9 +807,9 @@ function SolidDisasterRegion({ region, selected, onSelect }) {
                 <div className="compact-popup-loc">{region.location}</div>
                 <div className="compact-popup-coords">{region.coordsFormatted}</div>
                 <div className="compact-popup-type-note">
-                  {region.hasRealTrack
-                    ? 'Satya Nondvilela Marg (Real Recorded Path)'
-                    : 'Anumanit Kshetra (Approximate Regional Footprint)'}
+                  {region.hasReliablePolygon
+                    ? 'Satya Nondvileli Seema (Verified Impact Area)'
+                    : 'Nirdisht Sthan (Reported Location)'}
                 </div>
               </div>
 

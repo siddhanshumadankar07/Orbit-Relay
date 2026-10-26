@@ -276,7 +276,13 @@ export default function App() {
   const [showFleetModal, setShowFleetModal] = useState(false)
   const [selectedFleetCategory, setSelectedFleetCategory] = useState(null)
   const [showAnalysisModal, setShowAnalysisModal] = useState(false)
+  const [currentUtcTime, setCurrentUtcTime] = useState(() => new Date().toISOString())
   const searchInputRef = useRef(null)
+
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentUtcTime(new Date().toISOString()), 1000)
+    return () => clearInterval(timer)
+  }, [])
 
   const backendOnline = useBackendHealth()
   const { issPosition } = useLiveIssPosition()
@@ -464,15 +470,31 @@ export default function App() {
           </div>
 
           <div className="topbar-datetime">
-            <span className="date-line">3 Nov 2025</span>
-            <span className="time-line">14:27 UTC</span>
+            <span className="date-line">
+              {new Date(currentUtcTime).toUTCString().slice(5, 16)}
+            </span>
+            <span className="time-line">
+              {currentUtcTime.slice(11, 19)} UTC
+            </span>
           </div>
 
-          <button className="icon-action-btn" title="Navin Suchana">
+          <button
+            className="icon-action-btn"
+            title="Navin Suchana (Alerts)"
+            onClick={() => setShowAnalysisModal(true)}
+            aria-label="Navin Suchana"
+          >
             <Bell size={17} />
           </button>
 
-          <div className="profile-avatar-btn" title="Abhiyan Adhyaksha">
+          <div
+            className="profile-avatar-btn"
+            title="Abhiyan Adhyaksha (Fleet &amp; Missions)"
+            onClick={() => setShowFleetModal(true)}
+            role="button"
+            tabIndex={0}
+            aria-label="Abhiyan Adhyaksha"
+          >
             <User size={17} />
           </div>
         </div>

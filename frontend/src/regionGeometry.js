@@ -6,11 +6,12 @@ export const REGION_SURFACE_RADIUS = EARTH_RADIUS + 0.0028
 export const BORDER_SURFACE_RADIUS = EARTH_RADIUS + 0.0034
 
 /**
- * Cluster raw disasters by hazard module and geographic proximity.
- * Aggregates nearby events of the same type within 3.5 degrees into one regional area.
- * Keeps region footprints geographically modest (1.0° - 2.4°) to prevent over-coloring entire countries.
+ * Prepares real disaster visual representations on the 3D Earth.
+ * - Point events are mapped to their EXACT reported coordinates with clean, restrained surface markers.
+ * - Solid surface regions are generated ONLY when genuine polygon boundary geometry is supplied by the data source.
+ * - Artificial track swaths, giant circle approximations, and excessive clustering are completely eliminated.
  */
-export function clusterDisastersIntoRegions(disasters = []) {
+export function prepareDisasterVisuals(disasters = []) {
   const validDisasters = disasters.filter(
     (d) =>
       typeof d.lat === 'number' &&
@@ -20,232 +21,140 @@ export function clusterDisastersIntoRegions(disasters = []) {
       d.lat >= -89 &&
       d.lat <= 89 &&
       d.lon >= -180 &&
-      d.lon <= 180
+      d.lon <= 180 &&
+      // Exclude null island (0, 0) defaults unless specifically in the Gulf of Guinea
+      !(Math.abs(d.lat) < 0.001 && Math.abs(d.lon) < 0.001)
   )
 
   if (validDisasters.length === 0) return []
 
-  // Group by module first so different hazard types remain distinct
-  const byModule = {}
+  // Deduplicate events with identical IDs or co-located events (within 0.05 deg ~ 5 km)
+  const seenIds = new Set()
+  const uniqueEvents = []
+
   validDisasters.forEach((d) => {
-    const mod = d.module || 'drishti'
-    if (!byModule[mod]) byModule[mod] = []
-    byModule[mod].push(d)
+    if (d.id && seenIds.has(d.id)) return
+    if (d.id) seenIds.add(d.id)
+
+    // Check for near-identical duplicate coordinate in same category
+    const isDuplicate = uniqueEvents.some(
+      (u) =>
+        u.type === d.type &&
+        Math.abs(u.lat - d.lat) < 0.04 &&
+        Math.abs(u.lon - d.lon) < 0.04
+    )
+
+    if (!isDuplicate) {
+      uniqueEvents.push(d)
+    }
   })
 
-  const regions = []
-  let regionCounter = 1
+  const regions = uniqueEvents.map((event) => {
+    const isCyclone =
+      event.type === 'chakravat' ||
+      event.module === 'vayu' ||
+      (event.name && event.name.toLowerCase().includes('chakravat'))
 
-  Object.entries(byModule).forEach(([_mod, events]) => {
-    const visited = new Set()
+    // Check if reliable polygon geometry is supplied by NASA EONET
+    const hasPolygonData =
+      Array.isArray(event.coordinates) &&
+      event.coordinates.some((c) => Array.isArray(c.polygon) && c.polygon.length >= 3)
 
-    events.forEach((event, idx) => {
-      if (visited.has(idx)) return
+    let fillGeometry = null
+    let borderGeometry = null
+    let hasReliablePolygon = false
 
-      const cluster = [event]
-      visited.add(idx)
-
-      // Cluster events within spatial proximity (3.5 degrees ~380 km)
-      for (let j = idx + 1; j < events.length; j++) {
-        if (visited.has(j)) continue
-        const other = events[j]
-        const dLat = event.lat - other.lat
-        const cosLat = Math.cos(((event.lat + other.lat) / 2) * (Math.PI / 180))
-        let dLon = Math.abs(event.lon - other.lon)
-        if (dLon > 180) dLon = 360 - dLon
-        const distDeg = Math.sqrt(dLat * dLat + (dLon * cosLat) * (dLon * cosLat))
-
-        if (distDeg <= 3.5) {
-          cluster.push(other)
-          visited.add(j)
+    if (hasPolygonData) {
+      const polyCoord = event.coordinates.find((c) => Array.isArray(c.polygon) && c.polygon.length >= 3)
+      if (polyCoord) {
+        const polyResult = createSphericalPolygonGeometry(polyCoord.polygon)
+        if (polyResult) {
+          fillGeometry = polyResult.geometry
+          borderGeometry = polyResult.borderGeometry
+          hasReliablePolygon = true
         }
       }
+    }
 
-      // Compute cluster centroid
-      let sumLat = 0
-      let sumLon = 0
-      cluster.forEach((c) => {
-        sumLat += c.lat
-        sumLon += c.lon
-      })
-
-      const centerLat = sumLat / cluster.length
-      const centerLon = sumLon / cluster.length
-
-      const primary = cluster[0]
-      const isCyclone =
-        primary.type === 'chakravat' ||
-        primary.module === 'vayu' ||
-        (primary.name && primary.name.toLowerCase().includes('chakravat'))
-
-      // Modest, geographically realistic angular radius in degrees:
-      // Single event: 1.1 degrees (~120 km)
-      // Clustered events: up to 2.4 degrees (~260 km)
-      const clusterSpan = Math.min(1.3, (cluster.length - 1) * 0.25)
-      const radiusDeg = Math.min(2.4, Math.max(1.0, 1.1 + clusterSpan))
-
-      // Only check for cyclone track if it's actually a cyclone and supplied by official API
-      let validCycloneTrack = null
-      if (isCyclone && Array.isArray(primary.coordinates) && primary.coordinates.length >= 2) {
-        // Validate that points are strictly consecutive and local (< 3.5 deg apart, no antimeridian jumps)
-        const pts = primary.coordinates
-          .filter((p) => typeof p.latitude === 'number' && typeof p.longitude === 'number')
-          .map((p) => ({ lat: p.latitude, lon: p.longitude }))
-
-        let valid = true
-        for (let i = 0; i < pts.length - 1; i++) {
-          const dLt = pts[i + 1].lat - pts[i].lat
-          const dLn = Math.abs(pts[i + 1].lon - pts[i].lon)
-          if (Math.sqrt(dLt * dLt + dLn * dLn) > 3.5 || dLn > 5.0) {
-            valid = false
-            break
-          }
-        }
-        if (valid && pts.length >= 2) {
-          validCycloneTrack = pts
-        }
-      }
-
-      regions.push({
-        id: `region-${primary.id || regionCounter++}`,
-        primaryDisasterId: primary.id,
-        primaryDisaster: primary,
-        cluster,
-        clusterCount: cluster.length,
-        centerLat,
-        centerLon,
-        radiusDeg,
-        color: primary.color,
-        sanskritName: primary.sanskritName || primary.name,
-        module: primary.module,
-        moduleTitle: primary.moduleTitle,
-        type: primary.type,
-        severity: primary.severity,
-        location: primary.location,
-        coordsFormatted: `${Math.abs(centerLat).toFixed(2)}°${centerLat >= 0 ? 'N' : 'S'}, ${Math.abs(centerLon).toFixed(2)}°${centerLon >= 0 ? 'E' : 'W'}`,
-        source: primary.source,
-        sourceUrl: primary.sourceUrl,
-        isRecent: cluster.some((c) => c.isRecent),
-        time: primary.time,
-        isCyclone,
-        hasRealTrack: Boolean(validCycloneTrack),
-        trackCoords: validCycloneTrack,
-        isApproximate: !validCycloneTrack,
-      })
-    })
+    return {
+      id: `disaster-${event.id}`,
+      primaryDisasterId: event.id,
+      primaryDisaster: event,
+      centerLat: event.lat,
+      centerLon: event.lon,
+      color: event.color,
+      sanskritName: event.sanskritName || event.name,
+      module: event.module,
+      moduleTitle: event.moduleTitle,
+      type: event.type,
+      severity: event.severity,
+      location: event.location,
+      coordsFormatted: event.coordsFormatted || `${Math.abs(event.lat).toFixed(2)}°${event.lat >= 0 ? 'N' : 'S'}, ${Math.abs(event.lon).toFixed(2)}°${event.lon >= 0 ? 'E' : 'W'}`,
+      source: event.source,
+      sourceUrl: event.sourceUrl,
+      isRecent: event.isRecent,
+      time: event.time,
+      isCyclone,
+      hasReliablePolygon,
+      fillGeometry,
+      borderGeometry,
+    }
   })
 
   return regions
 }
 
+// Backward-compatibility alias
+export const clusterDisastersIntoRegions = prepareDisasterVisuals
+
 /**
- * Creates a spherical polygon mesh geometry that conforms strictly to the Earth sphere.
- * Generates an organic boundary polygon and triangulates it into spherical cap rings.
+ * Creates a spherical polygon mesh geometry strictly from verified polygon boundary coordinates.
+ * Vertices: array of [latitude, longitude].
  */
-export function createSphericalCapGeometry(
-  centerLat,
-  centerLon,
-  radiusDeg,
-  numSides = 32,
-  seed = 1,
-  isCyclone = false
-) {
-  const geometry = new THREE.BufferGeometry()
+export function createSphericalPolygonGeometry(polygonCoords) {
+  if (!polygonCoords || polygonCoords.length < 3) return null
+
+  // Calculate polygon centroid
+  let sumLat = 0
+  let sumLon = 0
+  polygonCoords.forEach((p) => {
+    sumLat += p[0]
+    sumLon += p[1]
+  })
+  const centLat = sumLat / polygonCoords.length
+  const centLon = sumLon / polygonCoords.length
+
   const positions = []
   const normals = []
   const indices = []
 
-  // Center vertex
-  const centerVec = latLonToVector(centerLat, centerLon, REGION_SURFACE_RADIUS)
-  positions.push(centerVec.x, centerVec.y, centerVec.z)
-  const cNorm = centerVec.clone().normalize()
+  // Centroid vertex (index 0)
+  const centVec = latLonToVector(centLat, centLon, REGION_SURFACE_RADIUS)
+  positions.push(centVec.x, centVec.y, centVec.z)
+  const cNorm = centVec.clone().normalize()
   normals.push(cNorm.x, cNorm.y, cNorm.z)
 
-  // Cosine of latitude to scale longitude offset accurately, clamped to prevent blowup
-  const cosLat = Math.max(0.2, Math.cos(centerLat * (Math.PI / 180)))
-  const maxDeltaLon = Math.min(3.8, radiusDeg / cosLat)
+  // Outer ring vertices
+  const borderPoints = []
+  polygonCoords.forEach((p, idx) => {
+    const v = latLonToVector(p[0], p[1], REGION_SURFACE_RADIUS)
+    positions.push(v.x, v.y, v.z)
+    const n = v.clone().normalize()
+    normals.push(n.x, n.y, n.z)
 
-  // Generate boundary points in lat/lon
-  const boundaryLatLons = []
-  for (let i = 0; i < numSides; i++) {
-    const alpha = (i / numSides) * Math.PI * 2
+    borderPoints.push(latLonToVector(p[0], p[1], BORDER_SURFACE_RADIUS))
 
-    let pert = 1.0 + 0.06 * Math.sin(3 * alpha + seed) + 0.03 * Math.cos(5 * alpha + seed * 1.5)
-    if (isCyclone) {
-      pert = 1.0 + 0.10 * Math.sin(2 * alpha + seed)
-    }
+    const currentIdx = idx + 1
+    const nextIdx = idx + 1 === polygonCoords.length ? 1 : idx + 2
+    indices.push(0, currentIdx, nextIdx)
+  })
 
-    const bLat = Math.max(-88, Math.min(88, centerLat + radiusDeg * Math.cos(alpha) * pert))
-    const bLon = centerLon + maxDeltaLon * Math.sin(alpha) * pert
-
-    boundaryLatLons.push({ lat: bLat, lon: bLon })
-  }
-
-  // 3 concentric rings of vertices for spherical curvature conformity
-  const numRings = 3
-  for (let r = 1; r <= numRings; r++) {
-    const frac = r / numRings
-    for (let i = 0; i < numSides; i++) {
-      const b = boundaryLatLons[i]
-      const vLat = centerLat + (b.lat - centerLat) * frac
-      const vLon = centerLon + (b.lon - centerLon) * frac
-
-      const v = latLonToVector(vLat, vLon, REGION_SURFACE_RADIUS)
-      positions.push(v.x, v.y, v.z)
-      const n = v.clone().normalize()
-      normals.push(n.x, n.y, n.z)
-    }
-  }
-
-  // Indices:
-  // Ring 0 is center (index 0)
-  // Inner fan: center to ring 1
-  for (let i = 0; i < numSides; i++) {
-    const next = (i + 1) % numSides
-    indices.push(0, 1 + i, 1 + next)
-  }
-
-  // Connecting intermediate rings
-  for (let r = 1; r < numRings; r++) {
-    const innerStart = 1 + (r - 1) * numSides
-    const outerStart = 1 + r * numSides
-
-    for (let i = 0; i < numSides; i++) {
-      const next = (i + 1) % numSides
-      const inCurrent = innerStart + i
-      const inNext = innerStart + next
-      const outCurrent = outerStart + i
-      const outNext = outerStart + next
-
-      indices.push(inCurrent, outCurrent, outNext)
-      indices.push(inCurrent, outNext, inNext)
-    }
-  }
-
+  const geometry = new THREE.BufferGeometry()
   geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3))
   geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3))
   geometry.setIndex(indices)
 
-  return { geometry, boundaryLatLons }
-}
+  const borderGeometry = new THREE.BufferGeometry().setFromPoints(borderPoints)
 
-/**
- * Creates a crisp border contour line loop geometry hugging the perimeter of the region.
- */
-export function createBoundaryOutlineGeometry(boundaryLatLons) {
-  const points = boundaryLatLons.map((p) =>
-    latLonToVector(p.lat, p.lon, BORDER_SURFACE_RADIUS)
-  )
-  return new THREE.BufferGeometry().setFromPoints(points)
-}
-
-/**
- * Creates a subtle trajectory line on the sphere for storms with verified consecutive track coordinates.
- */
-export function createTrackLineGeometry(trackCoords) {
-  if (!trackCoords || trackCoords.length < 2) return null
-  const points = trackCoords.map((p) =>
-    latLonToVector(p.lat, p.lon, BORDER_SURFACE_RADIUS)
-  )
-  return new THREE.BufferGeometry().setFromPoints(points)
+  return { geometry, borderGeometry }
 }
