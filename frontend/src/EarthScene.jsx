@@ -805,8 +805,8 @@ function SolidDisasterRegion({ region, selected, onSelect }) {
                     e.stopPropagation()
                     onSelect(null)
                   }}
-                  title="Band Kara"
-                  aria-label="Band Kara"
+                  title="Close"
+                  aria-label="Close"
                 >
                   &times;
                 </button>
@@ -817,14 +817,14 @@ function SolidDisasterRegion({ region, selected, onSelect }) {
                 <div className="compact-popup-coords">{region.coordsFormatted}</div>
                 <div className="compact-popup-type-note">
                   {region.hasReliablePolygon
-                    ? 'Satya Nondvileli Seema (Verified Impact Area)'
-                    : 'Nirdisht Sthan (Reported Location)'}
+                    ? 'Verified impact area'
+                    : 'Reported location'}
                 </div>
               </div>
 
               <div className="compact-popup-footer">
                 <span className={`recency-tag ${region.isRecent ? 'recency-recent' : 'recency-recorded'}`}>
-                  {region.isRecent ? 'Navin' : 'Abhilikhita'}
+                  {region.isRecent ? 'New' : 'Recorded'}
                 </span>
                 {region.sourceUrl && (
                   <a
@@ -834,7 +834,7 @@ function SolidDisasterRegion({ region, selected, onSelect }) {
                     className="compact-popup-source"
                     onClick={(e) => e.stopPropagation()}
                   >
-                    Srot ↗
+                    Source ↗
                   </a>
                 )}
               </div>
@@ -1020,29 +1020,29 @@ export default function EarthScene({
       </Canvas>
       </SceneErrorBoundary>
 
-      {/* ── Bottom Controls Floating Toolbar (Sanskrit in Roman letters) ── */}
+      {/* ── Bottom Controls Floating Toolbar ── */}
       <div className="earth-viewport-toolbar">
         <button
           className="toolbar-btn"
           onClick={handleZoomIn}
-          title="Nikata (+)"
-          aria-label="Nikata"
+          title="Zoom in"
+          aria-label="Zoom in"
         >
           +
         </button>
         <button
           className="toolbar-btn"
           onClick={handleZoomOut}
-          title="Dura (−)"
-          aria-label="Dura"
+          title="Zoom out"
+          aria-label="Zoom out"
         >
           &minus;
         </button>
         <button
           className="toolbar-btn"
           onClick={handleResetView}
-          title="Kendra Sthiti (Bharat)"
-          aria-label="Kendra Sthiti"
+          title="Reset view"
+          aria-label="Reset view"
         >
           &#x2316;
         </button>
@@ -1052,9 +1052,9 @@ export default function EarthScene({
         <div
           className="toolbar-toggle-block"
           onClick={onToggleRotate}
-          title="Prithvi Bhraman Chalu/Band Kara"
+          title={autoRotate ? 'Stop Earth rotation' : 'Start Earth rotation'}
         >
-          <span className="toggle-label">Prithvi Bhraman</span>
+          <span className="toggle-label">Earth rotation</span>
           <div className={`switch-pill ${autoRotate ? 'is-on' : 'is-off'}`}>
             <span className="switch-thumb" />
           </div>

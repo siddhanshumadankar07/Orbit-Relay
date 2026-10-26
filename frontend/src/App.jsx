@@ -217,53 +217,62 @@ function useLiveIssPosition() {
 }
 
 /* ── Honest AI Analysis Hook (Local Ollama / Factual) ─────── */
+
 function useAiAnalysis() {
   const [analysis, setAnalysis] = useState({
-    summary:
-      'Jagatik patalivar NASA EONET dware sakriya vanagni, teevra chakravat, aani jalaplav kshetranche niyamit nirikshan chaloo aahe. Bharat aani dakshin Asia kinarpattivar sthirata mulyankan kele jaat aahe.',
-    model: 'Rule-based Factual Digest',
+    summary: 'Connecting to local Llama analysis...',
+    model: 'Connecting...',
     ollama_connected: false,
-    timestamp: '2026-10-26T06:15:00.000Z',
+    timestamp: null,
   })
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     let cancelled = false
-    const fetchAnalysis = async () => {
+    const controller = new AbortController()
+
+    async function fetchAnalysis() {
       try {
-        const candidateEndpoints = [
-          '/ai-analysis',
-          `${BACKEND_BASE}/ai-analysis`,
-        ]
-        for (const ep of candidateEndpoints) {
-          try {
-            const res = await fetch(ep, { signal: AbortSignal.timeout(12000) })
-            if (res.ok) {
-              const data = await res.json()
-              if (!cancelled && data.summary) {
-                setAnalysis(data)
-                setLoading(false)
-                return
-              }
-            }
-          } catch {
-            // try next endpoint
-          }
+        const res = await fetch(`${BACKEND_BASE}/ai-analysis`, {
+          signal: controller.signal,
+        })
+
+        if (!res.ok) {
+          throw new Error(`Backend returned HTTP ${res.status}`)
         }
-      } catch {
-        // fallback
+
+        const data = await res.json()
+
+        if (!data.summary) {
+          throw new Error('No summary returned by backend')
+        }
+
+        if (!cancelled) setAnalysis(data)
+      } catch (error) {
+        if (!cancelled) {
+          setAnalysis({
+            summary: `Could not load Llama analysis: ${error.message}`,
+            model: 'Connection error',
+            ollama_connected: false,
+            timestamp: null,
+          })
+        }
+      } finally {
+        if (!cancelled) setLoading(false)
       }
-      if (!cancelled) setLoading(false)
     }
 
     fetchAnalysis()
+
     return () => {
       cancelled = true
+      controller.abort()
     }
   }, [])
 
   return { analysis, loading }
 }
+
 
 export default function App() {
   const [activeNav, setActiveNav] = useState('home')
@@ -312,7 +321,7 @@ export default function App() {
     )
   }, [disasters, activeDisasterId])
 
-  // Dynamically compute Sanskrit modules count from real disasters
+  // Dynamically compute module counts from real disasters
   const dynamicModules = useMemo(() => {
     return SANSKRIT_MODULES.map((mod) => {
       const count =
@@ -326,7 +335,7 @@ export default function App() {
     })
   }, [disasters])
 
-  // Filtered disaster list (by search query or selected Sanskrit module)
+  // Filtered disaster list (by search query or selected module)
   const filteredDisasters = useMemo(() => {
     let list = disasters
 
@@ -367,7 +376,7 @@ export default function App() {
     setSelectedDisasterId(id)
   }, [])
 
-  // Toggle Sanskrit module filter
+  // Toggle module filter
   const handleModuleClick = (moduleId) => {
     if (activeModuleFilter === moduleId) {
       setActiveModuleFilter(null)
@@ -429,7 +438,7 @@ export default function App() {
           </div>
           <div className="brand-titles">
             <span className="brand-name">OrbitRelay</span>
-            <span className="brand-sub">Teevra Upagraha. Surakshit Prithvi.</span>
+            <span className="brand-sub">Rapid Satellites. A Safer Earth.</span>
           </div>
         </div>
 
@@ -440,7 +449,7 @@ export default function App() {
             <input
               ref={searchInputRef}
               type="text"
-              placeholder="Anveshan: Sthan, Aapada, va Nirdeshanka..."
+              placeholder="Search locations, disasters, or coordinates..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="search-input"
@@ -449,7 +458,7 @@ export default function App() {
               <button
                 className="search-clear-btn"
                 onClick={() => setSearchQuery('')}
-                aria-label="Anveshan saaf kara"
+                aria-label="Clear search"
               >
                 &times;
               </button>
@@ -464,9 +473,9 @@ export default function App() {
           <div className="system-status-indicator">
             <div className="status-top-line">
               <span className={`status-glow-dot ${backendOnline ? 'online' : 'simulated'}`} />
-              <span className="status-text">Pranali Sakriya</span>
+              <span className="status-text">System Operational</span>
             </div>
-            <span className="status-sub-text">Jivit Upagraha tatha Vayu Jankari</span>
+            <span className="status-sub-text">Live satellite and weather data</span>
           </div>
 
           <div className="topbar-datetime">
@@ -480,20 +489,20 @@ export default function App() {
 
           <button
             className="icon-action-btn"
-            title="Navin Suchana (Alerts)"
+            title="Recent alerts"
             onClick={() => setShowAnalysisModal(true)}
-            aria-label="Navin Suchana"
+            aria-label="Recent alerts"
           >
             <Bell size={17} />
           </button>
 
           <div
             className="profile-avatar-btn"
-            title="Abhiyan Adhyaksha (Fleet &amp; Missions)"
+            title="Mission control (fleet and missions)"
             onClick={() => setShowFleetModal(true)}
             role="button"
             tabIndex={0}
-            aria-label="Abhiyan Adhyaksha"
+            aria-label="Mission control"
           >
             <User size={17} />
           </div>
@@ -504,7 +513,7 @@ export default function App() {
          MAIN BODY (LEFT SIDEBAR + DASHBOARD GRID)
          ═══════════════════════════════════════════════════════════ */}
       <div className="dashboard-body">
-        {/* ── LEFT NAVIGATION SIDEBAR with Sanskrit Modules ── */}
+        {/* ── LEFT NAVIGATION SIDEBAR ── */}
         <aside className="left-sidebar">
           {/* Main Navigation links */}
           <nav className="nav-menu">
@@ -513,7 +522,7 @@ export default function App() {
               onClick={() => { setActiveNav('home'); setActiveModuleFilter(null); }}
             >
               <Home size={17} className="nav-btn-icon" />
-              <span>Griha</span>
+              <span>Home</span>
             </button>
 
             <button
@@ -521,7 +530,7 @@ export default function App() {
               onClick={() => setActiveNav('live-earth')}
             >
               <Globe2 size={17} className="nav-btn-icon" />
-              <span>Jivit Prithvi</span>
+              <span>Live Earth</span>
             </button>
 
             <button
@@ -529,7 +538,7 @@ export default function App() {
               onClick={() => setActiveNav('disaster-analysis')}
             >
               <AlertTriangle size={17} className="nav-btn-icon" />
-              <span>Aapada Vishleshan</span>
+              <span>Disaster Analysis</span>
             </button>
 
             <button
@@ -537,7 +546,7 @@ export default function App() {
               onClick={() => { setActiveNav('satellites'); setShowFleetModal(true); }}
             >
               <Radio size={17} className="nav-btn-icon" />
-              <span>Upagraha</span>
+              <span>Satellites</span>
             </button>
 
             <button
@@ -545,7 +554,7 @@ export default function App() {
               onClick={() => setActiveNav('analytics')}
             >
               <BarChart3 size={17} className="nav-btn-icon" />
-              <span>Vishleshan</span>
+              <span>Analytics</span>
             </button>
 
             <button
@@ -553,7 +562,7 @@ export default function App() {
               onClick={() => setActiveNav('reports')}
             >
               <FileText size={17} className="nav-btn-icon" />
-              <span>Prativedan</span>
+              <span>Reports</span>
             </button>
 
             <button
@@ -561,13 +570,13 @@ export default function App() {
               onClick={() => setActiveNav('settings')}
             >
               <Settings size={17} className="nav-btn-icon" />
-              <span>Vinyas</span>
+              <span>Settings</span>
             </button>
           </nav>
 
-          {/* Section Divider: AAPADA VIBHAG (Sanskrit Modules in Roman letters) */}
+          {/* Section Divider: Disaster Modules */}
           <div className="sanskrit-modules-section">
-            <span className="section-label">AAPADA VIBHAG</span>
+            <span className="section-label">DISASTER MODULES</span>
 
             <div className="sanskrit-modules-list">
               {dynamicModules.map((mod) => (
@@ -575,7 +584,7 @@ export default function App() {
                   key={mod.id}
                   className={`sanskrit-module-btn ${activeModuleFilter === mod.id ? 'is-selected' : ''}`}
                   onClick={() => handleModuleClick(mod.id)}
-                  title={`${mod.description} (${mod.activeCount} sakriya)`}
+                  title={`${mod.description} (${mod.activeCount} active)`}
                 >
                   <div className="module-icon-circle" style={{ backgroundColor: `${mod.color}22`, color: mod.color }}>
                     {mod.id === 'drishti' && <Radio size={14} />}
@@ -601,7 +610,7 @@ export default function App() {
               <span className="footer-dot-icon" />
               <div className="footer-brand-text">
                 <strong>OrbitRelay v1.0</strong>
-                <small>Surakshit Bhavishya Hetu Nirmit</small>
+                <small>Built for a Safer Future</small>
               </div>
             </div>
           </div>
@@ -612,7 +621,7 @@ export default function App() {
           {/* ════ LEFT COLUMN: Earth Scene + Bottom Panels ════ */}
           <div className="grid-left-column">
             {/* 3D Earth Planetary Visualization Container */}
-            <section className="earth-viewport-card" aria-label="Jivit Prithvi Nirikshan">
+            <section className="earth-viewport-card" aria-label="Live Earth observation">
               <EarthScene
                 selectedId={selectedDisasterId}
                 onSelect={handleSelectDisaster}
@@ -625,14 +634,14 @@ export default function App() {
 
             {/* Bottom Row under Earth: 3 Aligned Information Panels */}
             <div className="bottom-panels-row">
-              {/* Bottom Card 1: Prithvi Vivaran */}
+              {/* Bottom Card 1: Earth Details */}
               <div className="dashboard-panel panel-earth-info">
                 <div className="panel-header">
                   <div className="title-with-badge">
                     <span className="info-globe-icon">🌐</span>
-                    <h3 className="panel-title">Prithvi Vivaran</h3>
+                    <h3 className="panel-title">Earth Details</h3>
                     <span className="badge-live-dot-tag">
-                      <span className="live-dot" /> Jivit
+                      <span className="live-dot" /> Live
                     </span>
                   </div>
                 </div>
@@ -653,7 +662,7 @@ export default function App() {
                     <div className="info-metric-item">
                       <span className="metric-icon-pin">⌖</span>
                       <div className="metric-texts">
-                        <span className="metric-label">Nirdisht Lakshya</span>
+                        <span className="metric-label">Selected Target</span>
                         <strong className="metric-val">{selectedDisaster.name}</strong>
                         <span className="metric-val text-dim">{selectedDisaster.location}</span>
                       </div>
@@ -662,7 +671,7 @@ export default function App() {
                     <div className="info-metric-item">
                       <span className="metric-icon-pin">📍</span>
                       <div className="metric-texts">
-                        <span className="metric-label">Nirdeshanka</span>
+                        <span className="metric-label">Coordinates</span>
                         <strong className="metric-val">{selectedDisaster.coordsFormatted}</strong>
                       </div>
                     </div>
@@ -670,7 +679,7 @@ export default function App() {
                     <div className="info-metric-item">
                       <span className="metric-icon-pin">✦</span>
                       <div className="metric-texts">
-                        <span className="metric-label">Srot</span>
+                        <span className="metric-label">Source</span>
                         <strong className="metric-val">{selectedDisaster.source}</strong>
                         {selectedDisaster.sourceUrl && (
                           <a
@@ -680,7 +689,7 @@ export default function App() {
                             className="hazard-source-link"
                             style={{ marginTop: 3, display: 'inline-flex', alignSelf: 'flex-start' }}
                           >
-                            Srot Nond <ExternalLink size={10} />
+                            View source record <ExternalLink size={10} />
                           </a>
                         )}
                       </div>
@@ -689,25 +698,25 @@ export default function App() {
                     <div className="info-metric-item">
                       <span className="metric-icon-pin">☀</span>
                       <div className="metric-texts">
-                        <span className="metric-label">Nirikshan Dinank</span>
+                        <span className="metric-label">Observation Date</span>
                         <strong className="metric-val">{selectedDisaster.time}</strong>
-                        <span className="metric-val text-dim">{selectedDisaster.fullDate || 'Jivit Nirikshan'}</span>
+                        <span className="metric-val text-dim">{selectedDisaster.fullDate || 'Live observation'}</span>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* Bottom Card 2: Navin Suchana [5] */}
+              {/* Bottom Card 2: Recent Alerts */}
               <div className="dashboard-panel panel-recent-alerts">
                 <div className="panel-header">
                   <div className="title-with-badge">
                     <span className="header-alert-icon">⚠️</span>
-                    <h3 className="panel-title">Navin Suchana</h3>
+                    <h3 className="panel-title">Recent Alerts</h3>
                     <span className="badge-count-red">{recentAlerts.length}</span>
                   </div>
                   <button className="panel-link-btn" onClick={() => setActiveNav('disaster-analysis')}>
-                    Sarva Paha
+                    View All
                   </button>
                 </div>
 
@@ -733,7 +742,7 @@ export default function App() {
                         </span>
                         <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginTop: '2px' }}>
                           <span className={`recency-tag ${d.isRecent ? 'recency-recent' : 'recency-recorded'}`}>
-                            {d.isRecent ? 'Navin' : 'Abhilikhita'}
+                            {d.isRecent ? 'New' : 'Recorded'}
                           </span>
                           {d.sourceUrl && (
                             <a
@@ -742,9 +751,9 @@ export default function App() {
                               rel="noopener noreferrer"
                               className="hazard-source-link"
                               onClick={(e) => e.stopPropagation()}
-                              title={`Srot: ${d.source}`}
+                              title={`Source: ${d.source}`}
                             >
-                              Srot <ExternalLink size={9} />
+                              Source <ExternalLink size={9} />
                             </a>
                           )}
                         </div>
@@ -756,22 +765,22 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Bottom Card 3: Kritrim Buddhimatta Vishleshan */}
+              {/* Bottom Card 3: AI Analysis */}
               <div className="dashboard-panel panel-ai-analysis">
                 <div className="panel-header">
                   <div className="title-with-badge">
                     <Sparkles size={15} className="ai-header-spark" />
-                    <h3 className="panel-title">Kritrim Buddhimatta Vishleshan</h3>
+                    <h3 className="panel-title">AI Analysis</h3>
                   </div>
                   <button className="panel-link-btn" onClick={() => setShowAnalysisModal(true)}>
-                    Sarva Paha
+                    View All
                   </button>
                 </div>
 
                 <div className="ai-analysis-body">
                   <div className="ai-headline-row">
                     <span className="ai-cyan-dot">•</span>
-                    <strong className="ai-headline-text">Jagatik Sankat Mulyankan</strong>
+                    <strong className="ai-headline-text">Global Risk Assessment</strong>
                     <span
                       style={{
                         marginLeft: 'auto',
@@ -785,7 +794,7 @@ export default function App() {
                         border: `1px solid ${aiAnalysis.ollama_connected ? 'rgba(34, 197, 94, 0.4)' : 'rgba(245, 158, 11, 0.4)'}`,
                       }}
                     >
-                      {aiAnalysis.ollama_connected ? 'Ollama Sakriya' : 'Factual Digest'}
+                      {aiAnalysis.ollama_connected ? 'Ollama Active' : 'Factual Digest'}
                     </span>
                   </div>
 
@@ -796,32 +805,32 @@ export default function App() {
                   {/* 4 Risk Category Boxes */}
                   <div className="ai-risk-grid">
                     <div className="risk-pill-box">
-                      <span className="risk-box-label">Jalaplav Sankat</span>
-                      <strong className="risk-box-status text-danger">• Uchha</strong>
+                      <span className="risk-box-label">Flood Risk</span>
+                      <strong className="risk-box-status text-danger">• High</strong>
                     </div>
 
                     <div className="risk-pill-box">
-                      <span className="risk-box-label">Chakravat Sankat</span>
-                      <strong className="risk-box-status text-danger">• Uchha</strong>
+                      <span className="risk-box-label">Cyclone Risk</span>
+                      <strong className="risk-box-status text-danger">• High</strong>
                     </div>
 
                     <div className="risk-pill-box">
-                      <span className="risk-box-label">Vanagni Sankat</span>
-                      <strong className="risk-box-status text-amber">• Madhyam</strong>
+                      <span className="risk-box-label">Wildfire Risk</span>
+                      <strong className="risk-box-status text-amber">• Medium</strong>
                     </div>
 
                     <div className="risk-pill-box">
-                      <span className="risk-box-label">Paryavaran Sankat</span>
-                      <strong className="risk-box-status text-amber">• Madhyam</strong>
+                      <span className="risk-box-label">Environmental Risk</span>
+                      <strong className="risk-box-status text-amber">• Medium</strong>
                     </div>
                   </div>
 
                   <div className="ai-analysis-footer">
                     <span>
-                      {aiAnalysis.model} &bull; Antim Nond:{' '}
+                      {aiAnalysis.model} &bull; Last updated:{' '}
                       {aiAnalysis.timestamp
                         ? new Date(aiAnalysis.timestamp).toLocaleTimeString()
-                        : 'Jivit'}
+                        : 'Live'}
                     </span>
                   </div>
                 </div>
@@ -829,19 +838,19 @@ export default function App() {
             </div>
           </div>
 
-          {/* ════ RIGHT COLUMN: Sakriya Aapada, Upagraha Sthiti, Abhiyan Pankti ════ */}
+          {/* ════ RIGHT COLUMN: Active Disasters, Satellite Status, Mission Queue ════ */}
           <div className="grid-right-column">
-            {/* Card 1: Sakriya Aapada */}
+            {/* Card 1: Active Disasters */}
             <div className="dashboard-panel panel-active-disasters">
               <div className="panel-header">
                 <div className="title-with-badge">
                   <ShieldAlert size={16} className="header-shield-icon" />
-                  <h3 className="panel-title">Sakriya Aapada</h3>
+                  <h3 className="panel-title">Active Disasters</h3>
                   <span className="badge-count-red">{filteredDisasters.length}</span>
                   {disastersMeta.source && (
                     <span
                       className="badge-live-source"
-                      title={`Telemetry: ${disastersMeta.endpointUsed}\nFetched at: ${disastersMeta.fetchedAt || 'Jivit'}`}
+                      title={`Telemetry: ${disastersMeta.endpointUsed}\nFetched at: ${disastersMeta.fetchedAt || 'Live'}`}
                     >
                       <span className="live-dot" /> {disastersMeta.source}
                     </span>
@@ -851,23 +860,23 @@ export default function App() {
                   className="panel-link-btn"
                   onClick={() => setActiveModuleFilter(null)}
                 >
-                  Sarva Paha
+                  View All
                 </button>
               </div>
 
               {disastersLoading ? (
                 <div className="disaster-loading-box">
                   <div className="telemetry-spinner" />
-                  <span>Lod Hot Aahe: NASA EONET srotashi sampark sthapit hot aahe...</span>
+                  <span>Loading NASA EONET data...</span>
                 </div>
               ) : disastersError ? (
                 <div className="disaster-error-box">
                   <div className="error-text-row">
                     <AlertTriangle size={15} color="#ef4444" style={{ flexShrink: 0, marginTop: 2 }} />
-                    <span>Truti: NASA EONET srot anuplabdha aahe ({disastersError}). Mool nondani darsavli jaat aahe.</span>
+                    <span>Error: NASA EONET source unavailable ({disastersError}). Showing baseline records.</span>
                   </div>
                   <button className="retry-btn" onClick={refetchDisasters}>
-                    <RefreshCw size={12} /> Punah Prayas Kara
+                    <RefreshCw size={12} /> Retry
                   </button>
                 </div>
               ) : null}
@@ -897,7 +906,7 @@ export default function App() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px' }}>
                         <span className="hazard-row-coords">{d.coordsFormatted}</span>
                         <span className={`recency-tag ${d.isRecent ? 'recency-recent' : 'recency-recorded'}`}>
-                          {d.isRecent ? 'Navin' : 'Abhilikhita'}
+                          {d.isRecent ? 'New' : 'Recorded'}
                         </span>
                         {d.sourceUrl && (
                           <a
@@ -906,9 +915,9 @@ export default function App() {
                             rel="noopener noreferrer"
                             className="hazard-source-link"
                             onClick={(e) => e.stopPropagation()}
-                            title={`Adhikrut Srot: ${d.source}`}
+                            title={`Official source: ${d.source}`}
                           >
-                            Srot <ExternalLink size={9} />
+                            Source <ExternalLink size={9} />
                           </a>
                         )}
                       </div>
@@ -925,18 +934,18 @@ export default function App() {
               </div>
             </div>
 
-            {/* Card 2: Upagraha Sthiti & ISS Jivit Sthiti */}
+            {/* Card 2: Satellite and ISS Status */}
             <div className="dashboard-panel panel-satellite-status">
               <div className="panel-header">
                 <div className="title-with-badge">
                   <Radio size={16} className="header-radio-icon" />
-                  <h3 className="panel-title">Upagraha Sthiti</h3>
+                  <h3 className="panel-title">Satellite Status</h3>
                 </div>
                 <button
                   className="status-summary-green"
                   onClick={() => setShowFleetModal(true)}
                 >
-                  <span className="green-dot-pulse" /> 12/14 Karyarat
+                  <span className="green-dot-pulse" /> 12/14 Operational
                 </button>
               </div>
 
@@ -945,16 +954,16 @@ export default function App() {
                 <div className="iss-box-top">
                   <div className="iss-title-group">
                     <Radio size={13} className="iss-icon" />
-                    <strong>Antarrashtriya Antariksha Kendra (ISS)</strong>
+                    <strong>International Space Station (ISS)</strong>
                   </div>
                   <span className={`iss-live-pill ${issPosition?.is_live ? 'is-live' : 'is-sim'}`}>
-                    <span className="live-dot" /> {issPosition?.is_live ? 'Jivit Sanchar' : 'Anukalpit'}
+                    <span className="live-dot" /> {issPosition?.is_live ? 'Live telemetry' : 'Simulated'}
                   </span>
                 </div>
 
                 <div className="iss-metrics-grid">
                   <div className="iss-metric">
-                    <span className="iss-metric-label">Nirdeshanka</span>
+                    <span className="iss-metric-label">Coordinates</span>
                     <strong className="iss-metric-val">
                       {issPosition?.latitude != null
                         ? `${Math.abs(issPosition.latitude).toFixed(2)}°${issPosition.latitude >= 0 ? 'N' : 'S'}, ${Math.abs(issPosition.longitude).toFixed(2)}°${issPosition.longitude >= 0 ? 'E' : 'W'}`
@@ -962,31 +971,31 @@ export default function App() {
                     </strong>
                   </div>
                   <div className="iss-metric">
-                    <span className="iss-metric-label">Unchi</span>
+                    <span className="iss-metric-label">Altitude</span>
                     <strong className="iss-metric-val">{issPosition?.altitude || 429.8} km</strong>
                   </div>
                   <div className="iss-metric">
-                    <span className="iss-metric-label">Kaksheeya Vega</span>
+                    <span className="iss-metric-label">Orbital Velocity</span>
                     <strong className="iss-metric-val">{issPosition?.velocity || 27560} km/h</strong>
                   </div>
                   <div className="iss-metric">
-                    <span className="iss-metric-label">Sthiti</span>
+                    <span className="iss-metric-label">Status</span>
                     <strong className="iss-metric-val">
                       {issPosition?.visibility === 'daylight'
-                        ? 'Surya Prakash'
+                        ? 'Daylight'
                         : issPosition?.visibility === 'eclipsed'
-                        ? 'Prithvi Chhaya'
-                        : 'Sakriya'}
+                        ? "Earth's shadow"
+                        : 'Active'}
                     </strong>
                   </div>
                 </div>
 
                 <div className="iss-footer-row">
-                  <span className="iss-source-tag">Srot: {issPosition?.source || 'WhereTheISSAt (NORAD #25544)'}</span>
+                  <span className="iss-source-tag">Source: {issPosition?.source || 'WhereTheISSAt (NORAD #25544)'}</span>
                   <span className="iss-time-tag">
                     {issPosition?.updated_at
                       ? new Date(issPosition.updated_at).toLocaleTimeString()
-                      : 'Jivit'}
+                      : 'Live'}
                   </span>
                 </div>
               </div>
@@ -1012,19 +1021,19 @@ export default function App() {
               </div>
             </div>
 
-            {/* Card 3: Abhiyan Pankti [3] */}
+            {/* Card 3: Mission Queue */}
             <div className="dashboard-panel panel-mission-queue">
               <div className="panel-header">
                 <div className="title-with-badge">
                   <Radio size={16} className="header-queue-icon" />
-                  <h3 className="panel-title">Abhiyan Pankti</h3>
+                  <h3 className="panel-title">Mission Queue</h3>
                   <span className="badge-count-red">3</span>
                 </div>
                 <button
                   className="panel-link-btn"
                   onClick={() => setShowNewMissionModal(true)}
                 >
-                  &bull; Sarva Paha
+                  &bull; View All
                 </button>
               </div>
 
@@ -1068,7 +1077,7 @@ export default function App() {
             <div className="modal-top">
               <div className="modal-heading-cluster">
                 <Radio size={18} className="modal-lead-icon" />
-                <h3>Abhiyan Yojana (DEMO)</h3>
+                <h3>Schedule Mission (Demo)</h3>
               </div>
               <button
                 className="modal-close-icon"
@@ -1080,42 +1089,42 @@ export default function App() {
 
             <form onSubmit={handleCreateMission} className="modal-form">
               <label className="form-field">
-                <span>Abhiyan Shirshak</span>
+                <span>Mission Title</span>
                 <input
                   name="title"
                   required
-                  placeholder="e.g., Brahmaputra Jalaplav Nirikshan"
+                  placeholder="e.g., Brahmaputra Flood Monitoring"
                   defaultValue="Thermal Infrared Hotspot Mapping"
                 />
               </label>
 
               <label className="form-field">
-                <span>Lakshya Kshetra</span>
+                <span>Target Region</span>
                 <input
                   name="location"
                   required
-                  placeholder="e.g., Madhyavarti Mongolia"
-                  defaultValue="Mongolia Kshetra"
+                  placeholder="e.g., Central Mongolia"
+                  defaultValue="Mongolia"
                 />
               </label>
 
               <div className="form-split-row">
                 <label className="form-field">
-                  <span>Nirdisht Upagraha</span>
+                  <span>Assigned Satellite</span>
                   <select name="satellite">
                     <option value="TERRA-1 • EO">TERRA-1 • EO</option>
-                    <option value="AQUA-2 • Vayu">AQUA-2 • Vayu</option>
+                    <option value="AQUA-2 • Weather">AQUA-2 • Weather</option>
                     <option value="SENTINEL-3 • EO">SENTINEL-3 • EO</option>
                     <option value="LANDSAT-9 • EO">LANDSAT-9 • EO</option>
                   </select>
                 </label>
 
                 <label className="form-field">
-                  <span>Prathamikta</span>
+                  <span>Priority</span>
                   <select name="priority">
-                    <option value="Uchha">Uchha</option>
-                    <option value="Madhyam">Madhyam</option>
-                    <option value="Nimna">Nimna</option>
+                    <option value="High">High</option>
+                    <option value="Medium">Medium</option>
+                    <option value="Low">Low</option>
                   </select>
                 </label>
               </div>
@@ -1126,10 +1135,10 @@ export default function App() {
                   className="btn-modal-cancel"
                   onClick={() => setShowNewMissionModal(false)}
                 >
-                  Radda Kara
+                  Cancel
                 </button>
                 <button type="submit" className="btn-modal-submit">
-                  <Plus size={16} /> Abhiyan Nirdharit Kara
+                  <Plus size={16} /> Schedule Mission
                 </button>
               </div>
             </form>
@@ -1146,8 +1155,8 @@ export default function App() {
                 <Radio size={18} className="modal-lead-icon" />
                 <h3>
                   {selectedFleetCategory
-                    ? `${selectedFleetCategory.category} Upagraha Sthiti`
-                    : 'OrbitRelay Upagraha Sthiti'}
+                    ? `${selectedFleetCategory.category} Satellite Status`
+                    : 'OrbitRelay Satellite Status'}
                 </h3>
               </div>
               <button
@@ -1163,7 +1172,7 @@ export default function App() {
                 <div key={cat.category} className="fleet-cat-block">
                   <div className="fleet-cat-head">
                     <strong className="fleet-cat-title">{cat.category}</strong>
-                    <span className="fleet-cat-count">{cat.onlineCount} / {cat.totalCount} karyarat</span>
+                    <span className="fleet-cat-count">{cat.onlineCount} / {cat.totalCount} operational</span>
                   </div>
                   <div className="fleet-sat-pills">
                     {cat.satellites.map((sat) => (
@@ -1186,7 +1195,7 @@ export default function App() {
             <div className="modal-top">
               <div className="modal-heading-cluster">
                 <Sparkles size={18} className="modal-lead-icon text-cyan" />
-                <h3>Jagatik Sankat Mulyankan &amp; Kritrim Buddhimatta Vishleshan</h3>
+                <h3>Global Risk Assessment &amp; AI Analysis</h3>
               </div>
               <button
                 className="modal-close-icon"
@@ -1229,45 +1238,45 @@ export default function App() {
                     border: `1px solid ${aiAnalysis.ollama_connected ? 'rgba(34, 197, 94, 0.4)' : 'rgba(245, 158, 11, 0.4)'}`,
                   }}
                 >
-                  {aiAnalysis.ollama_connected ? 'Jivit Ollama' : 'Factual Digest'}
+                  {aiAnalysis.ollama_connected ? 'Ollama Active' : 'Factual Digest'}
                 </span>
               </div>
 
-              <h4>Sakriya Ghatana Vivaran: {selectedDisaster.name} ({selectedDisaster.location})</h4>
+              <h4>Active Event Details: {selectedDisaster.name} ({selectedDisaster.location})</h4>
               <p className="incident-detail-p">{selectedDisaster.detail}</p>
               <div className="incident-meta-grid">
-                <div><span>Vibhag:</span> <strong>{selectedDisaster.moduleTitle}</strong></div>
-                <div><span>Nirdeshanka:</span> <strong>{selectedDisaster.coordsFormatted}</strong></div>
-                <div><span>Nirikshan Dinank:</span> <strong>{selectedDisaster.time}</strong></div>
-                <div><span>Srot:</span> <strong>{selectedDisaster.source}</strong></div>
+                <div><span>Module:</span> <strong>{selectedDisaster.moduleTitle}</strong></div>
+                <div><span>Coordinates:</span> <strong>{selectedDisaster.coordsFormatted}</strong></div>
+                <div><span>Observation Date:</span> <strong>{selectedDisaster.time}</strong></div>
+                <div><span>Source:</span> <strong>{selectedDisaster.source}</strong></div>
                 {selectedDisaster.sourceUrl && (
                   <div style={{ gridColumn: 'span 2' }}>
-                    <span>Adhikrut Nond:</span>{' '}
+                    <span>Official Record:</span>{' '}
                     <a
                       href={selectedDisaster.sourceUrl}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="modal-source-link"
                     >
-                      NASA / Ghatana Nond Ughada ↗
+                      Open NASA event record ↗
                     </a>
                   </div>
                 )}
               </div>
 
               <div className="analysis-report-box">
-                <h5>Kritrim Buddhimatta &amp; Ekatrit Prithvi Nirikshan Vishleshan</h5>
+                <h5>AI &amp; Integrated Earth Observation Analysis</h5>
                 <p style={{ fontSize: '11px', color: '#e2e8f0', lineHeight: 1.5, marginBottom: '8px' }}>
                   {aiAnalysis.summary}
                 </p>
                 <div style={{ fontSize: '9.5px', color: '#94a3b8', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '6px', marginBottom: '8px' }}>
-                  <strong>Nirikshan vs Anuman Niyam:</strong> Pratyaksha nondvileli tathye (NASA EONET telemetry) he nirikshan ahet; bhavishyatil prabhav he anumanit sifarashi ahet.
+                  <strong>Observation vs. Forecast:</strong> Directly recorded facts (NASA EONET telemetry) are observations; potential future impacts are forecast recommendations.
                 </div>
                 <ul>
-                  <li><CheckCircle2 size={14} /> Gujarat kinarpatti jalaplav seema nirdharan hetu Sentinel-1 SAR orbital pass nirdharit kara.</li>
-                  <li><CheckCircle2 size={14} /> Mongolia Arkhangai vanagni tapaman niyamit tapasnyasathi 6-taas infrared scan chalva.</li>
-                  <li><CheckCircle2 size={14} /> Bangal chya Upasagarat chakravat Vayu gati ani disha INSAT-3DR dware niyamit tapasat raha.</li>
-                  <li><CheckCircle2 size={14} /> Uttarakhand yatayat margasathi lalachya bhuskhalan suchana jari kara.</li>
+                  <li><CheckCircle2 size={14} /> Schedule a Sentinel-1 SAR orbital pass to map flood boundaries along the Gujarat coast.</li>
+                  <li><CheckCircle2 size={14} /> Run six-hourly infrared scans to monitor wildfire temperatures in Mongolia's Arkhangai region.</li>
+                  <li><CheckCircle2 size={14} /> Continue monitoring cyclone wind speed and direction in the Bay of Bengal using INSAT-3DR.</li>
+                  <li><CheckCircle2 size={14} /> Issue a landslide warning for transport routes in Uttarakhand.</li>
                 </ul>
               </div>
             </div>

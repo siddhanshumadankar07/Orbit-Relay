@@ -2,242 +2,242 @@ import * as THREE from 'three'
 
 export const EARTH_RADIUS = 1.22
 
-/* ── Sanskrit Disaster Modules (in Roman/English Letters) ──── */
+/* ── Disaster Modules ─────────────────────────────────────── */
 export const SANSKRIT_MODULES = [
   {
     id: 'drishti',
-    code: 'Drishti',
-    title: 'Paryavaran & Sarva Aapada',
-    description: 'Bhoomi nirikshan tatha paryavaran jankari.',
+    code: 'Observation',
+    title: 'Environment & All Hazards',
+    description: 'Earth observation and environmental data.',
     iconName: 'Radar',
     color: '#22c55e',
     activeCount: 14,
   },
   {
     id: 'varuna',
-    code: 'Varuna',
-    title: 'Jalaplav & Jala Sankat',
-    description: 'Jalaplav manchitra, nadi pravah, tatha samudra suchana.',
+    code: 'Water',
+    title: 'Floods & Water Hazards',
+    description: 'Flood maps, river flows, and ocean conditions.',
     iconName: 'Waves',
     color: '#38bdf8',
     activeCount: 3,
   },
   {
     id: 'agni',
-    code: 'Agni',
-    title: 'Vanagni & Ushna Sankat',
-    description: 'Agni vishamata, sakriya vanagni seema tatha dhooma.',
+    code: 'Fire',
+    title: 'Wildfires & Heat',
+    description: 'Fire anomalies, active wildfire boundaries, and smoke.',
     iconName: 'Flame',
     color: '#ef4444',
     activeCount: 2,
   },
   {
     id: 'prithvi',
-    code: 'Prithvi',
-    title: 'Bhukampa & Krishi',
-    description: 'Bhoomi kampa, mridha aadrata tatha kshetrīya vishleshan.',
+    code: 'Earth',
+    title: 'Earthquakes & Agriculture',
+    description: 'Ground motion, soil moisture, and regional analysis.',
     iconName: 'Sprout',
     color: '#eab308',
     activeCount: 4,
   },
   {
     id: 'vayu',
-    code: 'Vayu',
-    title: 'Chakravat & Vayu Sankat',
-    description: 'Ushnakatibandhiya chakravat gati tatha vayu vega.',
+    code: 'Weather',
+    title: 'Cyclones & Weather',
+    description: 'Tropical cyclone tracking and wind speeds.',
     iconName: 'Wind',
     color: '#f97316',
     activeCount: 1,
   },
   {
     id: 'parvat',
-    code: 'Parvat',
-    title: 'Bhuskhalan & Parvat Sankat',
-    description: 'Parvat dhalan sthirata, malba pravah tatha bhuskhalan jankari.',
+    code: 'Terrain',
+    title: 'Landslides & Mountain Hazards',
+    description: 'Slope stability, debris flows, and landslide data.',
     iconName: 'Mountain',
     color: '#a855f7',
     activeCount: 1,
   },
 ]
 
-/* ── 5 Active Baseline Disasters (Sanskrit in Roman letters) ─ */
+/* ── Active Baseline Disasters ────────────────────────────── */
 export const ACTIVE_DISASTERS = [
   {
     id: 'landslide-1',
-    name: 'Bhuskhalan',
-    sanskritName: 'Bhuskhalan',
-    location: 'Uttarakhand, Bharat',
+    name: 'Landslide',
+    sanskritName: 'Landslide',
+    location: 'Uttarakhand, India',
     lat: 30.39,
     lon: 79.06,
     coordsFormatted: '30.39°N, 79.06°E',
-    severity: 'Uchha',
-    time: '2h purvi',
+    severity: 'High',
+    time: '2h ago',
     module: 'parvat',
-    moduleTitle: 'Parvat',
+    moduleTitle: 'Terrain',
     type: 'bhuskhalan',
     color: '#a855f7', // Purple: Bhuskhalan
-    source: 'ISRO Disaster Management Support / Nirdarshan',
-    detail: 'Himalaya parvatiya margavar bhuskhalan. Margavar malba pasarlyamule yatayat band.',
-    riskMetric: 'Uchha Sankat',
+    source: 'ISRO Disaster Management Support',
+    detail: 'A landslide along a Himalayan mountain road has blocked traffic with debris.',
+    riskMetric: 'High risk',
   },
   {
     id: 'flood-1',
-    name: 'Jalaplav',
-    sanskritName: 'Jalaplav',
-    location: 'Gujarat, Bharat',
+    name: 'Flood',
+    sanskritName: 'Flood',
+    location: 'Gujarat, India',
     lat: 22.30,
     lon: 72.60,
     coordsFormatted: '22.30°N, 72.60°E',
-    severity: 'Uchha',
-    time: '3h purvi',
+    severity: 'High',
+    time: '3h ago',
     module: 'varuna',
-    moduleTitle: 'Varuna',
+    moduleTitle: 'Water',
     type: 'jalaplav',
     color: '#38bdf8', // Blue: Varuna
-    source: 'Central Water Commission & Sentinel SAR / Nirdarshan',
-    detail: 'Kinarpatti kshetramadhye jalaplav patali 1.8m ne vadhli. Jalaplav chetavni sakriya.',
-    riskMetric: 'Gambhira Sthiti',
+    source: 'Central Water Commission & Sentinel SAR',
+    detail: 'Flood levels in the coastal region have risen by 1.8 m. A flood warning is active.',
+    riskMetric: 'Severe conditions',
   },
   {
     id: 'wildfire-1',
-    name: 'Vanagni',
-    sanskritName: 'Vanagni',
+    name: 'Wildfire',
+    sanskritName: 'Wildfire',
     location: 'Mongolia',
     lat: 46.86,
     lon: 103.85,
     coordsFormatted: '46.86°N, 103.85°E',
-    severity: 'Madhyam',
-    time: '5h purvi',
+    severity: 'Medium',
+    time: '5h ago',
     module: 'agni',
-    moduleTitle: 'Agni',
+    moduleTitle: 'Fire',
     type: 'vanagni',
     color: '#ef4444', // Red: Agni
-    source: 'MODIS & VIIRS Thermal Hotspot Detection / Nirdarshan',
-    detail: 'Arkhangai prantat steppe vanagni 310 km² kshetravarti pasarli. Vayu veg mule purvekade vistaran.',
-    riskMetric: 'Vistaran Chalu',
+    source: 'MODIS & VIIRS Thermal Hotspot Detection',
+    detail: 'A steppe wildfire has spread across 310 km² in Arkhangai Province, with winds driving it eastward.',
+    riskMetric: 'Expansion in progress',
   },
   {
     id: 'drought-1',
-    name: 'Paryavaran',
-    sanskritName: 'Paryavaran',
+    name: 'Drought',
+    sanskritName: 'Drought',
     location: 'Australia',
     lat: -24.27,
     lon: 133.78,
     coordsFormatted: '24.27°S, 133.78°E',
-    severity: 'Madhyam',
-    time: '7h purvi',
+    severity: 'Medium',
+    time: '7h ago',
     module: 'drishti',
-    moduleTitle: 'Drishti',
+    moduleTitle: 'Observation',
     type: 'paryavaran',
     color: '#22c55e', // Green: Paryavaran
-    source: 'Bureau of Meteorology NDVI Index / Nirdarshan',
-    detail: 'Mridha aadrata kamtarta. Vanaspati aani krishi kshetramadhye shushkata sthiti.',
-    riskMetric: 'Jala Nyunata',
+    source: 'Bureau of Meteorology NDVI Index',
+    detail: 'Low soil moisture is causing dry conditions across vegetation and agricultural areas.',
+    riskMetric: 'Water shortage',
   },
   {
     id: 'cyclone-1',
-    name: 'Chakravat',
-    sanskritName: 'Chakravat',
-    location: 'Bangaal Upasagar',
+    name: 'Cyclone',
+    sanskritName: 'Cyclone',
+    location: 'Bay of Bengal',
     lat: 14.20,
     lon: 88.10,
     coordsFormatted: '14.20°N, 88.10°E',
-    severity: 'Uchha',
-    time: '8h purvi',
+    severity: 'High',
+    time: '8h ago',
     module: 'vayu',
-    moduleTitle: 'Vayu',
+    moduleTitle: 'Weather',
     type: 'chakravat',
     color: '#f97316', // Orange: Chakravat
-    source: 'IMD Chakravat Vibhag / Nirdarshan',
-    detail: 'Bangaal upasagarat teevra chakravat nirmiti, vayu vega 125 km/h.',
-    riskMetric: 'Teevra Vayu',
+    source: 'India Meteorological Department',
+    detail: 'A severe cyclone is forming in the Bay of Bengal, with wind speeds of 125 km/h.',
+    riskMetric: 'Severe winds',
   },
   {
     id: 'earthquake-1',
-    name: 'Bhukampa',
-    sanskritName: 'Bhukampa',
-    location: 'Sumatra, Hind Mahasagar',
+    name: 'Earthquake',
+    sanskritName: 'Earthquake',
+    location: 'Sumatra, Indian Ocean',
     lat: -0.78,
     lon: 100.35,
     coordsFormatted: '0.78°S, 100.35°E',
-    severity: 'Madhyam',
-    time: '12h purvi',
+    severity: 'Medium',
+    time: '12h ago',
     module: 'prithvi',
-    moduleTitle: 'Prithvi',
+    moduleTitle: 'Earth',
     type: 'bhukampa',
     color: '#eab308', // Yellow: Bhukampa
-    source: 'BMKG & USGS / Nirdarshan',
-    detail: 'Bhoomi kampa 5.8 tivrata. Mridha kampan nondavle gele.',
-    riskMetric: 'Bhukampa Dhoka',
+    source: 'BMKG & USGS',
+    detail: 'A magnitude 5.8 earthquake occurred. Ground shaking has been recorded.',
+    riskMetric: 'Earthquake hazard',
   },
 ]
 
-/* ── Satellite Fleet Information (Sanskrit in Roman letters) ─ */
+/* ── Satellite Fleet Information ─────────────────────────── */
 export const SATELLITE_FLEET = [
   {
-    category: 'Prithvi Nirikshan (EO)',
+    category: 'Earth Observation (EO)',
     onlineCount: 6,
     totalCount: 6,
     statusDot: 'green',
     satellites: ['SENTINEL-2A', 'SENTINEL-2B', 'LANDSAT-8', 'LANDSAT-9', 'RESOURCESAT-2A', 'CARTOSAT-3'],
   },
   {
-    category: 'Vayu & Jalvayu',
+    category: 'Weather & Climate',
     onlineCount: 4,
     totalCount: 4,
     statusDot: 'green',
     satellites: ['INSAT-3DR', 'INSAT-3DS', 'AQUA (MODIS)', 'TERRA'],
   },
   {
-    category: 'Aapada Nirikshan',
+    category: 'Disaster Monitoring',
     onlineCount: 2,
     totalCount: 4,
     statusDot: 'green',
-    satellites: ['RISAT-1A (SAR)', 'EOS-04', 'OCEANSAT-3 (Anukulan)', 'RISAT-2BR1 (Sajjata)'],
+    satellites: ['RISAT-1A (SAR)', 'EOS-04', 'OCEANSAT-3 (Adaptive)', 'RISAT-2BR1 (Ready)'],
   },
   {
-    category: 'Sanchar',
+    category: 'Communications',
     onlineCount: 0,
     totalCount: 0,
     statusDot: 'gray',
-    satellites: ['GSAT-7A (Surakshit)', 'GSAT-30 (Punarprasaran)'],
+    satellites: ['GSAT-7A (Secure)', 'GSAT-30 (Relay)'],
   },
 ]
 
-/* ── Mission Queue (Sanskrit in Roman letters) ────────────── */
+/* ── Mission Queue ───────────────────────────────────────── */
 export const MISSION_QUEUE_DATA = [
   {
     id: 'MSN-WILD-01',
-    title: 'Vanagni Nirikshan',
+    title: 'Wildfire Monitoring',
     location: 'Mongolia',
     satellite: 'TERRA-1 • EO',
-    status: 'Prakriya Chalu',
+    status: 'Processing',
     statusClass: 'status-processing',
     type: 'vanagni',
     module: 'agni',
-    priority: 'Madhyam',
+    priority: 'Medium',
   },
   {
     id: 'MSN-FLD-02',
-    title: 'Jalaplav Mulyankan',
+    title: 'Flood Assessment',
     location: 'Gujarat',
-    satellite: 'AQUA-2 • Vayu',
-    status: 'Panktibaddha',
+    satellite: 'AQUA-2 • Weather',
+    status: 'Queued',
     statusClass: 'status-queued',
     type: 'jalaplav',
     module: 'varuna',
-    priority: 'Uchha',
+    priority: 'High',
   },
   {
     id: 'MSN-LAND-03',
-    title: 'Bhuskhalan Vishleshan',
+    title: 'Landslide Analysis',
     location: 'Uttarakhand',
     satellite: 'SENTINEL-3 • EO',
-    status: 'Panktibaddha',
+    status: 'Queued',
     statusClass: 'status-queued',
     type: 'bhuskhalan',
     module: 'parvat',
-    priority: 'Uchha',
+    priority: 'High',
   },
 ]
 
@@ -253,14 +253,14 @@ export function latLonToVector(lat, lon, radius = EARTH_RADIUS + 0.02) {
   return new THREE.Vector3(x, y, z)
 }
 
-/* ── NASA EONET Category to Sanskrit Module & Color Mapping ─ */
+/* ── NASA EONET Category to Disaster Module & Color Mapping ─ */
 /**
- * Red: Agni — fires and wildfires.
- * Orange: Chakravat — cyclones and hurricanes.
- * Blue: Varuna — floods and water hazards.
- * Yellow: Bhukampa — earthquakes.
- * Purple: Bhuskhalan — landslides.
- * Green: Paryavaran — other environmental events.
+ * Red: Fire — fires and wildfires.
+ * Orange: Weather — cyclones and hurricanes.
+ * Blue: Water — floods and water hazards.
+ * Yellow: Earth — earthquakes.
+ * Purple: Terrain — landslides.
+ * Green: Observation — other environmental events.
  */
 export function mapEonetCategoryToModule(categories = []) {
   const catLower = categories.map((c) => String(c).toLowerCase()).join(' ')
@@ -268,12 +268,12 @@ export function mapEonetCategoryToModule(categories = []) {
   if (catLower.includes('fire') || catLower.includes('wildfire') || catLower.includes('volcano')) {
     return {
       module: 'agni',
-      moduleTitle: 'Agni',
-      sanskritName: catLower.includes('volcano') ? 'Jwalamukhi' : 'Vanagni',
+      moduleTitle: 'Fire',
+      sanskritName: catLower.includes('volcano') ? 'Volcano' : 'Wildfire',
       type: 'vanagni',
       color: '#ef4444', // Red: Agni
-      severity: 'Uchha',
-      riskMetric: catLower.includes('volcano') ? 'Jwalamukhi Utpat' : 'Vanagni Seema',
+      severity: 'High',
+      riskMetric: catLower.includes('volcano') ? 'Volcanic eruption' : 'Wildfire boundary',
     }
   }
   if (
@@ -284,95 +284,58 @@ export function mapEonetCategoryToModule(categories = []) {
   ) {
     return {
       module: 'vayu',
-      moduleTitle: 'Vayu',
-      sanskritName: 'Chakravat',
+      moduleTitle: 'Weather',
+      sanskritName: 'Cyclone',
       type: 'chakravat',
       color: '#f97316', // Orange: Chakravat
-      severity: 'Uchha',
-      riskMetric: 'Chakravat Vayu',
+      severity: 'High',
+      riskMetric: 'Cyclone winds',
     }
   }
   if (catLower.includes('flood') || catLower.includes('water') || catLower.includes('ice')) {
     return {
       module: 'varuna',
-      moduleTitle: 'Varuna',
-      sanskritName: catLower.includes('ice') ? 'Himakshetra' : 'Jalaplav',
+      moduleTitle: 'Water',
+      sanskritName: catLower.includes('ice') ? 'Ice hazard' : 'Flood',
       type: 'jalaplav',
       color: '#38bdf8', // Blue: Varuna
-      severity: 'Uchha',
-      riskMetric: catLower.includes('ice') ? 'Hima Nirikshan' : 'Jalaplav Suchana',
+      severity: 'High',
+      riskMetric: catLower.includes('ice') ? 'Ice monitoring' : 'Flood alert',
     }
   }
   if (catLower.includes('earthquake') || catLower.includes('seismic')) {
     return {
       module: 'prithvi',
-      moduleTitle: 'Prithvi',
-      sanskritName: 'Bhukampa',
+      moduleTitle: 'Earth',
+      sanskritName: 'Earthquake',
       type: 'bhukampa',
       color: '#eab308', // Yellow: Bhukampa
-      severity: 'Uchha',
-      riskMetric: 'Bhukampa Tarang',
+      severity: 'High',
+      riskMetric: 'Seismic activity',
     }
   }
   if (catLower.includes('landslide') || catLower.includes('debris') || catLower.includes('mudslide')) {
     return {
       module: 'parvat',
-      moduleTitle: 'Parvat',
-      sanskritName: 'Bhuskhalan',
+      moduleTitle: 'Terrain',
+      sanskritName: 'Landslide',
       type: 'bhuskhalan',
       color: '#a855f7', // Purple: Bhuskhalan
-      severity: 'Uchha',
-      riskMetric: 'Bhuskhalan Sankat',
+      severity: 'High',
+      riskMetric: 'Landslide risk',
     }
   }
 
-  // Fallback: Paryavaran (other environmental events including temperature extremes, drought)
+  // Fallback: other environmental events, including temperature extremes and drought
   return {
     module: 'drishti',
-    moduleTitle: 'Drishti',
-    sanskritName: 'Paryavaran',
+    moduleTitle: 'Observation',
+    sanskritName: 'Environmental event',
     type: 'paryavaran',
     color: '#22c55e', // Green: Paryavaran
-    severity: 'Madhyam',
-    riskMetric: 'Paryavaran Nirikshan',
+    severity: 'Medium',
+    riskMetric: 'Environmental monitoring',
   }
-}
-
-/* ── Name Sanitizer for Roman Sanskrit Vocabulary ─────────── */
-function sanitizeEventTitle(rawTitle, defaultSanskritName) {
-  if (!rawTitle) return defaultSanskritName
-
-  let t = rawTitle
-    .replace(/\bWildfire\b/gi, 'Vanagni')
-    .replace(/\bFire\b/gi, 'Agni')
-    .replace(/\bVolcano\b/gi, 'Jwalamukhi')
-    .replace(/\bCyclone\b/gi, 'Chakravat')
-    .replace(/\bHurricane\b/gi, 'Chakravat')
-    .replace(/\bTyphoon\b/gi, 'Chakravat')
-    .replace(/\bStorm\b/gi, 'Chakravat')
-    .replace(/\bFlood\b/gi, 'Jalaplav')
-    .replace(/\bFloods\b/gi, 'Jalaplav')
-    .replace(/\bFlooding\b/gi, 'Jalaplav')
-    .replace(/\bEarthquake\b/gi, 'Bhukampa')
-    .replace(/\bLandslide\b/gi, 'Bhuskhalan')
-    .replace(/\bWind\b/gi, 'Vayu')
-    .replace(/\bIce\b/gi, 'Hima')
-
-  // If the title didn't match any hazard keyword, prefix with the Sanskrit hazard type
-  const lower = t.toLowerCase()
-  if (
-    !lower.includes('vanagni') &&
-    !lower.includes('agni') &&
-    !lower.includes('chakravat') &&
-    !lower.includes('jalaplav') &&
-    !lower.includes('bhukampa') &&
-    !lower.includes('bhuskhalan') &&
-    !lower.includes('paryavaran')
-  ) {
-    t = `${defaultSanskritName} — ${t}`
-  }
-
-  return t
 }
 
 /* ── NASA EONET Data Transformer ─────────────────────────── */
@@ -382,7 +345,7 @@ export function transformEonetDisaster(event) {
   const lat = latestCoord ? Number(latestCoord.latitude) : null
   const lon = latestCoord ? Number(latestCoord.longitude) : null
 
-  let coordsFormatted = 'Nirdeshanka Anuplabdha'
+  let coordsFormatted = 'Coordinates unavailable'
   if (lat !== null && lon !== null && !isNaN(lat) && !isNaN(lon)) {
     const ns = lat >= 0 ? 'N' : 'S'
     const ew = lon >= 0 ? 'E' : 'W'
@@ -392,19 +355,18 @@ export function transformEonetDisaster(event) {
   const categories = Array.isArray(event.categories) ? event.categories : []
   const moduleMeta = mapEonetCategoryToModule(categories)
 
-  const rawTitle = event.title || moduleMeta.sanskritName
-  const sanitizedTitle = sanitizeEventTitle(rawTitle, moduleMeta.sanskritName)
-  const titleParts = sanitizedTitle.split(',')
+  const eventTitle = event.title || moduleMeta.sanskritName
+  const titleParts = eventTitle.split(',')
   const name = titleParts[0].trim()
   const location =
     titleParts.length > 1
       ? titleParts.slice(1).join(', ').trim()
-      : event.description || 'Jagatik Nirikshan'
+      : event.description || 'Global monitoring'
 
   const dateStr = event.updated || (latestCoord && latestCoord.date)
-  let time = 'Navin'
+  let time = 'New'
   let isRecent = true
-  let fullDate = 'Dinank Anuplabdha'
+  let fullDate = 'Date unavailable'
 
   if (dateStr) {
     try {
@@ -415,13 +377,13 @@ export function transformEonetDisaster(event) {
       const diffDays = Math.floor(diffHours / 24)
 
       if (diffHours < 1) {
-        time = 'Adhuna'
+        time = 'Just now'
       } else if (diffHours < 24) {
-        time = `${diffHours}h purvi`
+        time = `${diffHours}h ago`
       } else if (diffDays <= 7) {
-        time = `${diffDays}d purvi`
+        time = `${diffDays}d ago`
       } else if (diffDays <= 60) {
-        time = `${diffDays}d purvi`
+        time = `${diffDays}d ago`
       } else {
         const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
         time = `${eventTime.getUTCDate()} ${months[eventTime.getUTCMonth()]}`
@@ -430,7 +392,7 @@ export function transformEonetDisaster(event) {
       isRecent = diffDays <= 60
       fullDate = eventTime.toUTCString()
     } catch {
-      time = 'Abhilikhita'
+      time = 'Recorded'
       isRecent = false
     }
   }
@@ -465,7 +427,7 @@ export function transformEonetDisaster(event) {
     sourceUrl,
     detail:
       event.description ||
-      `NASA EONET aani ${moduleMeta.moduleTitle} vibhagantargat nondvileli sakriya aapada.`,
+      `Active disaster recorded by NASA EONET in the ${moduleMeta.moduleTitle} module.`,
     riskMetric: moduleMeta.riskMetric,
     categories,
     coordinates: coordsList,

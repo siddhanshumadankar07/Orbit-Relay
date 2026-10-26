@@ -346,22 +346,62 @@ def get_iss_position():
             }
 
 
+
 @app.get("/ai-analysis")
 def get_ai_analysis():
-    """Generate honest disaster analysis using local Ollama if available."""
-    # Check if Ollama is running and test model
+    """Analyze live NASA EONET events using local Ollama."""
     ollama_model = "llama3.2:3b"
     ollama_url = "http://127.0.0.1:11434/api/generate"
 
-    prompt = (
-        "You are an Earth observation assistant for the OrbitRelay dashboard. "
-        "Provide a concise 3-sentence summary of global disaster monitoring observations based on NASA EONET. "
-        "Strictly distinguish verified observations from estimates. "
-        "Mention monitoring priorities for severe storms, active wildfires, and flood regions. "
-        "Do not invent fake predictions."
-    )
-
     try:
+        nasa_data = get_disasters(limit=100)
+        events = nasa_data.get("disasters", [])
+
+        if not events:
+            return {
+                "summary": "NASA EONET returned no open events to analyze.",
+                "model": f"Ollama ({ollama_model})",
+                "ollama_connected": False,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "note": "No open NASA EONET events were available.",
+            }
+
+        event_lines = []
+        for event in events[:60]:
+            categories = ", ".join(event.get("categories") or [])
+            coords = event.get("coordinates") or []
+            location = ""
+
+            if coords:
+                point = coords[0]
+                location = (
+                    f" lat={point.get('latitude')},"
+                    f" lon={point.get('longitude')}"
+                )
+
+            event_lines.append(
+                f"- {event.get('title', 'Unknown event')} | "
+                f"Category: {categories or 'Unspecified'} | "
+                f"Active: {event.get('is_active')} | "
+                f"Updated: {event.get('updated') or 'Unknown'}"
+                f"{location}"
+            )
+
+        prompt = f"""
+You are OrbitRelay's Earth observation assistant.
+Analyze these real event records fetched from NASA EONET.
+Do not invent facts, causes, severity, locations, or predictions.
+Summarize event categories, monitoring priorities, and data limitations
+in 4-6 concise sentences.
+
+NASA source: {nasa_data.get('query_url')}
+Fetch time: {nasa_data.get('fetched_at')}
+Total events: {nasa_data.get('count')}
+
+EVENT RECORDS:
+{chr(10).join(event_lines)}
+"""
+
         body = json.dumps({
             "model": ollama_model,
             "prompt": prompt,
@@ -374,29 +414,40 @@ def get_ai_analysis():
             headers={"Content-Type": "application/json"},
         )
 
-        with urllib.request.urlopen(req, timeout=12) as response:
+        with urllib.request.urlopen(req, timeout=120) as response:
             result = json.loads(response.read().decode("utf-8"))
 
         generated_text = result.get("response", "").strip()
+        if not generated_text:
+            raise RuntimeError("Ollama returned an empty response.")
+
+        timestamp = datetime.now(timezone.utc).isoformat()
+
+        print("\n" + "=" * 55)
+        print("ORBITRELAY — LLAMA NASA DISASTER ANALYSIS")
+        print(f"NASA events fetched: {len(events)}")
+        print(generated_text)
+        print("=" * 55 + "\n", flush=True)
 
         return {
             "summary": generated_text,
             "model": f"Ollama ({ollama_model})",
             "ollama_connected": True,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-            "note": "Verified AI-generated summary from local LLM; observations distinguished from forecasts.",
+            "timestamp": timestamp,
+            "event_count": len(events),
+            "source": "NASA EONET",
+            "note": "Analysis generated from NASA EONET event records.",
         }
 
-    except Exception:
-        # Fallback when Ollama is offline or unavailable
+    except Exception as exc:
+        print(f"\n[OrbitRelay AI] Analysis failed: {exc}", flush=True)
         return {
             "summary": (
-                "Bhartiya kinarpatti aani dakshin Asia kshetramadhye jala aani vayu nirikshan chaloo aahe. "
-                "Jagatik patalivar MODIS aani VIIRS dware vanagni hotspot sodhle jaat aahet. "
-                "Himalaya parvatiya vibhagata parvat dhalan sthirateche niyamit mulyankan kele jaat aahe."
+                "AI analysis is temporarily unavailable. Check NASA EONET "
+                "connectivity and that Ollama is running."
             ),
-            "model": "Rule-based Factual Digest (Ollama Offline)",
+            "model": "Ollama unavailable",
             "ollama_connected": False,
             "timestamp": datetime.now(timezone.utc).isoformat(),
-            "note": "Local Ollama service offline or unreachable; factual rule-based summary displayed.",
+            "note": str(exc),
         }
