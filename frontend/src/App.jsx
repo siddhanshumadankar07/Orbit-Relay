@@ -614,7 +614,7 @@ export default function App() {
             {/* 3D Earth Planetary Visualization Container */}
             <section className="earth-viewport-card" aria-label="Jivit Prithvi Nirikshan">
               <EarthScene
-                selectedId={activeDisasterId}
+                selectedId={selectedDisasterId}
                 onSelect={handleSelectDisaster}
                 autoRotate={autoRotate}
                 onToggleRotate={() => setAutoRotate((prev) => !prev)}

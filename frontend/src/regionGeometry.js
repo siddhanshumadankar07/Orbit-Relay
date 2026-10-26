@@ -80,6 +80,8 @@ export function prepareDisasterVisuals(disasters = []) {
       id: `disaster-${event.id}`,
       primaryDisasterId: event.id,
       primaryDisaster: event,
+      cluster: [event],
+      clusterCount: 1,
       centerLat: event.lat,
       centerLon: event.lon,
       color: event.color,

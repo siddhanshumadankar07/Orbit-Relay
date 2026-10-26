@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, useCallback, Suspense } from 'react'
+import { useMemo, useRef, useState, useCallback, Suspense, Component } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { OrbitControls, Stars, Html, useTexture } from '@react-three/drei'
 import * as THREE from 'three'
@@ -740,42 +740,51 @@ function SolidDisasterRegion({ region, selected, onSelect }) {
         </group>
       )}
 
-      {/* Solid Surface Marker & Single Compact Popup */}
-      <Html
-        distanceFactor={5.5}
+      {/* Surface Marker Mesh (Native Three.js WebGL: zero DOM overhead, silky 60fps) */}
+      <mesh
         position={centerPos}
-        style={{ pointerEvents: 'auto' }}
+        onClick={(e) => {
+          e.stopPropagation()
+          onSelect(selected ? null : region.primaryDisasterId)
+        }}
       >
-        <div className="globe-marker-anchor">
-          {/* Subtle Center Reticle or Cyclone Animated Spiral */}
-          <div
-            className={`globe-region-reticle ${region.isCyclone ? 'is-cyclone' : ''} ${selected ? 'is-selected-hit' : ''}`}
-            onClick={(e) => {
-              e.stopPropagation()
-              onSelect(selected ? null : region.primaryDisasterId)
-            }}
-            title={`${region.sanskritName} — ${region.location}`}
-          >
-            {region.isCyclone ? (
-              <div className="cyclone-spiral-wrap">
-                <svg viewBox="0 0 24 24" className="cyclone-spiral-spin" width="16" height="16">
-                  <path
-                    d="M12 2.5a9.5 9.5 0 0 1 9.15 6.8c.27.95-.53 1.85-1.5 1.76-.83-.08-1.48-.75-1.61-1.57A6.5 6.5 0 0 0 8.5 4.34c-.87-.45-1.07-1.58-.4-2.27.4-.41.98-.6 1.54-.53A9.5 9.5 0 0 1 12 2.5zm-7.3 4.2c.74-.56 1.8-.3 2.16.56.32.76.06 1.66-.6 2.16A6.5 6.5 0 0 0 4.34 16.5c-.45.87-1.58 1.07-2.27.4-.41-.4-.6-.98-.53-1.54A9.5 9.5 0 0 1 4.7 6.7zm10.1 14.8c-.74.56-1.8.3-2.16-.56-.32-.76-.06-1.66.6-2.16A6.5 6.5 0 0 0 20.66 8.5c.45-.87 1.58-1.07 2.27-.4.41.4.6.98.53 1.54A9.5 9.5 0 0 1 14.8 21.5z"
-                    fill="#f97316"
-                  />
-                  <circle cx="12" cy="12" r="3" fill="#ffffff" />
-                </svg>
-              </div>
-            ) : (
-              <div
-                className="region-center-dot"
-                style={{ backgroundColor: region.color }}
-              />
-            )}
-          </div>
+        <sphereGeometry args={[selected ? 0.022 : 0.014, 12, 12]} />
+        <meshStandardMaterial
+          color={selected ? '#ffffff' : region.color}
+          emissive={region.color}
+          emissiveIntensity={selected ? 1.2 : 0.7}
+          roughness={0.2}
+        />
+      </mesh>
 
-          {/* ONLY ONE COMPACT POPUP WHEN THIS REGION IS CLICKED */}
-          {selected && (
+      {/* For Cyclones, an animated outer ring */}
+      {region.isCyclone && (
+        <mesh
+          position={centerPos}
+          onClick={(e) => {
+            e.stopPropagation()
+            onSelect(selected ? null : region.primaryDisasterId)
+          }}
+        >
+          <ringGeometry args={[0.020, 0.028, 16]} />
+          <meshBasicMaterial
+            color="#f97316"
+            side={THREE.DoubleSide}
+            transparent
+            opacity={0.85}
+            depthWrite={false}
+          />
+        </mesh>
+      )}
+
+      {/* ONLY ONE COMPACT POPUP WHEN THIS REGION IS CLICKED / SELECTED */}
+      {selected && (
+        <Html
+          distanceFactor={5.5}
+          position={centerPos}
+          style={{ pointerEvents: 'auto' }}
+        >
+          <div className="globe-marker-anchor">
             <div
               className="globe-single-compact-popup"
               onClick={(e) => e.stopPropagation()}
@@ -830,9 +839,9 @@ function SolidDisasterRegion({ region, selected, onSelect }) {
                 )}
               </div>
             </div>
-          )}
-        </div>
-      </Html>
+          </div>
+        </Html>
+      )}
     </group>
   )
 }
@@ -856,9 +865,36 @@ function SceneCameraObserver({ onHeadingChange }) {
   return null
 }
 
+/* ── Scene Error Boundary ────────────────────────────────── */
+class SceneErrorBoundary extends Component {
+  constructor(props) {
+    super(props)
+    this.state = { hasError: false }
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true }
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error('SceneErrorBoundary caught:', error, errorInfo)
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="scene-fallback-wrapper" style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#080c09' }}>
+          <FallbackGlobe />
+        </div>
+      )
+    }
+    return this.props.children
+  }
+}
+
 /* ── Public EarthScene Component ─────────────────────────── */
 export default function EarthScene({
-  selectedId = 'landslide-1',
+  selectedId = null,
   onSelect = () => {},
   autoRotate = true,
   onToggleRotate = () => {},
@@ -900,6 +936,7 @@ export default function EarthScene({
 
   return (
     <div className="earth-scene-container-inner">
+      <SceneErrorBoundary>
       <Canvas
         camera={{ position: [0, 0, 4.5], fov: 38, near: 0.1, far: 1000 }}
         dpr={[1, Math.min(typeof window !== 'undefined' ? window.devicePixelRatio : 1.25, 1.25)]}
@@ -954,7 +991,7 @@ export default function EarthScene({
           {regions.map((region) => {
             const isSelected =
               selectedId === region.primaryDisasterId ||
-              region.cluster.some((c) => c.id === selectedId)
+              Boolean(region.cluster?.some((c) => c.id === selectedId))
             return (
               <SolidDisasterRegion
                 key={region.id}
@@ -981,6 +1018,7 @@ export default function EarthScene({
           dampingFactor={0.05}
         />
       </Canvas>
+      </SceneErrorBoundary>
 
       {/* ── Bottom Controls Floating Toolbar (Sanskrit in Roman letters) ── */}
       <div className="earth-viewport-toolbar">
